@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Komikan</title>
+  <meta name="description" content="Play Komikan, a traditional Mapuche hunting board game, against a friend or a trained reinforcement-learning agent.">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main>
+    <section class="board-area">
+      <svg id="board" role="group" aria-label="Komikan board"></svg>
+    </section>
+
+    <aside class="panel">
+      <header>
+        <h1>Komikan</h1>
+        <p class="lede">A Mapuche hunting game. One komikelu, “the one who eats everything”, against twelve trewas, the dogs that corner it.</p>
+      </header>
+
+      <form id="setup">
+        <fieldset>
+          <legend>Opponent</legend>
+          <label><input type="radio" name="mode" value="agent" checked> Trained agent</label>
+          <label><input type="radio" name="mode" value="human"> Another person, on this device</label>
+        </fieldset>
+        <fieldset id="role-choice">
+          <legend>You play as</legend>
+          <label><input type="radio" name="role" value="0" checked> Komikelu</label>
+          <label><input type="radio" name="role" value="1"> Trewas</label>
+        </fieldset>
+        <p id="agent-note" class="note" hidden></p>
+        <button type="submit" class="secondary">New game</button>
+      </form>
+
+      <div class="status">
+        <p id="status" aria-live="polite"></p>
+        <button id="end-turn" type="button" hidden>End turn</button>
+        <dl>
+          <div><dt>Trewas eaten</dt><dd id="captured"></dd></div>
+          <div><dt>Turn</dt><dd id="turn"></dd></div>
+        </dl>
+      </div>
+
+      <details>
+        <summary>How to play</summary>
+        <ul>
+          <li>The komikelu moves first. Then players take turns.</li>
+          <li>Every piece moves one point along a line, forwards or backwards.</li>
+          <li>The komikelu can eat a trewa by jumping over it in a straight line onto an empty point. It may keep jumping in the same turn, or stop.</li>
+          <li>Trewas can't jump or eat. They win by leaving the komikelu with no possible move.</li>
+          <li>The komikelu wins by eating 9 trewas.</li>
+          <li>Added for this version: a game still going after 200 turns is a draw.</li>
+        </ul>
+      </details>
+
+      <footer>
+        Rules from <a href="https://www.chileparaninos.cl">Chile para Niños</a> (CC BY-SA) and Matus (1920).
+        Komikan is a game of the Mapuche people.
+      </footer>
+    </aside>
+  </main>
+  <script src="engine.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

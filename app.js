@@ -1,0 +1,232 @@
+// Board rendering and game flow for the static site.
+(async function () {
+  "use strict";
+
+  const { KOMIKELU, TREWAS, DRAW, createEngine, createPolicy } = globalThis.Komikan;
+  const SVG = "http://www.w3.org/2000/svg";
+  const SCALE = 42, MARGIN = 34, AGENT_DELAY = 550;
+
+  const el = (id) => document.getElementById(id);
+  const statusEl = el("status"), boardEl = el("board"), endTurnEl = el("end-turn");
+  const setupEl = el("setup"), roleChoiceEl = el("role-choice"), agentNoteEl = el("agent-note");
+
+  let engine, policies = {};
+  try {
+    const [board, agents] = await Promise.all([
+      fetch("data/board.json").then(checked).then((r) => r.json()),
+      fetch("data/agents.json").then(checked).then((r) => r.json()),
+    ]);
+    engine = createEngine(board);
+    for (const [name, agent] of Object.entries(agents)) {
+      const values = new Float32Array(await fetch(`data/${agent.file}`).then(checked).then((r) => r.arrayBuffer()));
+      policies[name === "komikelu" ? KOMIKELU : TREWAS] = createPolicy(engine, values, agent.shapes);
+    }
+  } catch (error) {
+    statusEl.textContent = "Couldn't load the game data. If you opened this file directly, serve the folder over HTTP instead.";
+    console.error(error);
+    return;
+  }
+
+  const px = ([x, y]) => [(x + 6) * SCALE + MARGIN, (y + 6) * SCALE + MARGIN];
+  const width = 12 * SCALE + 2 * MARGIN, height = 18 * SCALE + 2 * MARGIN;
+  boardEl.setAttribute("viewBox", `0 0 ${width} ${height}`);
+
+  const make = (tag, attrs, parent) => {
+    const node = document.createElementNS(SVG, tag);
+    for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, v);
+    if (parent) parent.append(node);
+    return node;
+  };
+
+  // Board layers. The piece layer sits between the lines and the click targets.
+  const linesLayer = make("g", {}, boardEl);
+  const trailLayer = make("g", {}, boardEl);
+  const pieceLayer = make("g", {}, boardEl);
+  const pointLayer = make("g", {}, boardEl);
+
+  const seen = new Set();
+  for (const [src, dst, over] of engine.actions) {
+    if (src === null || over !== null || seen.has(`${dst}-${src}`)) continue;
+    seen.add(`${src}-${dst}`);
+    const [x1, y1] = px(engine.coords[src]), [x2, y2] = px(engine.coords[dst]);
+    make("line", { class: "line", x1, y1, x2, y2 }, linesLayer);
+  }
+
+  const points = engine.coords.map((coord, p) => {
+    const [cx, cy] = px(coord);
+    make("circle", { class: "dot", cx, cy, r: 4 }, linesLayer);
+    const group = make("g", { class: "point" }, pointLayer);
+    const hit = make("circle", { class: "hit", cx, cy, r: SCALE * 0.95 }, group);
+    make("circle", { class: "target", cx, cy, r: 9 }, group);
+    make("circle", { class: "ring", cx, cy, r: 24 }, group);
+    hit.addEventListener("click", () => onPoint(p));
+    hit.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onPoint(p); }
+    });
+    return { group, hit };
+  });
+
+  // Game state.
+  let state, humans, selected, pieces, agentTimer, lastTurnMover;
+
+  function placePiece(node, point) {
+    const [x, y] = px(engine.coords[point]);
+    node.style.transform = `translate(${x}px, ${y}px)`;
+  }
+
+  function addPiece(kind, point) {
+    const node = make("g", { class: `piece ${kind}` }, pieceLayer);
+    make("circle", { r: kind === "komikelu" ? 21 : 18 }, node);
+    placePiece(node, point);
+    return node;
+  }
+
+  function newGame() {
+    clearTimeout(agentTimer);
+    const form = new FormData(setupEl);
+    const vsAgent = form.get("mode") === "agent";
+    const humanRole = Number(form.get("role"));
+    humans = vsAgent && policies[1 - humanRole] ? [humanRole] : [KOMIKELU, TREWAS];
+    state = engine.initialState();
+    selected = null;
+    lastTurnMover = null;
+    trailLayer.replaceChildren();
+    pieceLayer.replaceChildren();
+    pieces = new Map();
+    state.trewas.forEach((on, p) => { if (on) pieces.set(p, addPiece("trewa", p)); });
+    pieces.set(state.komikelu, addPiece("komikelu", state.komikelu));
+    refresh();
+  }
+
+  function playAction(action) {
+    const [src, dst, over] = engine.actions[action];
+    if (src !== null) {
+      if (lastTurnMover !== state.toMove || !state.inChain) trailLayer.replaceChildren();
+      const [x1, y1] = px(engine.coords[src]), [x2, y2] = px(engine.coords[dst]);
+      make("line", { class: "trail", x1, y1, x2, y2 }, trailLayer);
+      if (over !== null) {
+        const eaten = pieces.get(over);
+        pieces.delete(over);
+        eaten.classList.add("eaten");
+        setTimeout(() => eaten.remove(), 320);
+      }
+      const node = pieces.get(src);
+      pieces.delete(src);
+      pieces.set(dst, node);
+      placePiece(node, dst);
+    }
+    lastTurnMover = state.toMove;
+    state = engine.applyAction(state, action);
+    selected = null;
+    refresh();
+  }
+
+  function legalMoves() {
+    return engine.legalActions(state).map((id) => {
+      const [src, dst, over] = engine.actions[id];
+      return { id, src, dst, over };
+    });
+  }
+
+  function isHumanTurn() {
+    return engine.outcome(state) === null && humans.includes(state.toMove);
+  }
+
+  function onPoint(p) {
+    if (!isHumanTurn()) return;
+    const moves = legalMoves();
+    const from = state.toMove === KOMIKELU ? state.komikelu : selected;
+    const move = moves.find((m) => m.src === from && m.dst === p);
+    if (move) {
+      playAction(move.id);
+    } else if (state.toMove === TREWAS && moves.some((m) => m.src === p)) {
+      selected = selected === p ? null : p;
+      refresh();
+    }
+  }
+
+  function setActive(point, active, label) {
+    const { hit } = points[point];
+    if (active) {
+      hit.setAttribute("tabindex", "0");
+      hit.setAttribute("role", "button");
+      hit.setAttribute("aria-label", label);
+    } else {
+      hit.removeAttribute("tabindex");
+      hit.removeAttribute("role");
+      hit.removeAttribute("aria-label");
+    }
+  }
+
+  function roleName(role) {
+    return role === KOMIKELU ? "Komikelu" : "Trewas";
+  }
+
+  function statusText(result) {
+    const vsAgent = humans.length === 1;
+    if (result === DRAW) return "Draw: 200 turns have passed.";
+    if (result !== null) {
+      const how = result === KOMIKELU ? `${roleName(result)} wins by eating ${state.captured} trewas.` : "Trewas win: the komikelu can't move.";
+      return vsAgent ? `${humans[0] === result ? "You win." : "The agent wins."} ${how}` : how;
+    }
+    if (vsAgent && state.toMove !== humans[0]) return `The agent is playing the ${roleName(state.toMove).toLowerCase()}…`;
+    const who = vsAgent ? "Your move" : `${roleName(state.toMove)} to move`;
+    if (state.inChain) return `${who}: keep jumping, or end your turn.`;
+    if (state.toMove === TREWAS && selected === null) return `${who}: choose a trewa.`;
+    return `${who}.`;
+  }
+
+  function refresh() {
+    const result = engine.outcome(state);
+    const human = result === null && humans.includes(state.toMove);
+    const moves = human ? legalMoves() : [];
+    const from = state.toMove === KOMIKELU ? state.komikelu : selected;
+
+    points.forEach(({ group }, p) => {
+      const destination = moves.find((m) => m.src === from && m.dst === p);
+      const movable = state.toMove === TREWAS && moves.some((m) => m.src === p);
+      group.classList.toggle("movable", movable);
+      group.classList.toggle("selected", human && p === from);
+      group.classList.toggle("can-step", Boolean(destination && destination.over === null));
+      group.classList.toggle("can-jump", Boolean(destination && destination.over !== null));
+      const label = destination
+        ? `${destination.over === null ? "Move" : "Jump"} to point ${p}`
+        : `Select trewa on point ${p}`;
+      setActive(p, Boolean(destination) || movable, label);
+    });
+
+    statusEl.textContent = statusText(result);
+    endTurnEl.hidden = !(human && state.inChain);
+    el("captured").textContent = `${state.captured} / ${engine.rules.capturesToWin}`;
+    el("turn").textContent = `${Math.min(state.plies + 1, engine.rules.maxPlies)} / ${engine.rules.maxPlies}`;
+
+    if (result === null && !human) {
+      agentTimer = setTimeout(() => {
+        playAction(policies[state.toMove].selectAction(state, Math.random));
+      }, AGENT_DELAY);
+    }
+  }
+
+  function syncSetup() {
+    const form = new FormData(setupEl);
+    const vsAgent = form.get("mode") === "agent";
+    roleChoiceEl.disabled = !vsAgent;
+    const missing = vsAgent && !policies[1 - Number(form.get("role"))];
+    agentNoteEl.hidden = !missing;
+    agentNoteEl.textContent = missing ? "No trained agent is available for that side yet, so this would be a two-player game." : "";
+  }
+
+  function checked(response) {
+    if (!response.ok) throw new Error(`${response.url}: ${response.status}`);
+    return response;
+  }
+
+  setupEl.addEventListener("submit", (e) => { e.preventDefault(); newGame(); });
+  setupEl.addEventListener("change", syncSetup);
+  endTurnEl.addEventListener("click", () => {
+    if (isHumanTurn() && state.inChain) playAction(engine.STOP);
+  });
+
+  syncSetup();
+  newGame();
+})();
