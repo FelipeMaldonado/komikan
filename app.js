@@ -11,6 +11,38 @@
   const setupEl = el("setup"), roleChoiceEl = el("role-choice"), agentNoteEl = el("agent-note");
 
   const STORAGE_KEY = "komikan-recorded-games";
+  const LANGUAGE_KEY = "komikan-language";
+
+  // Language: the visitor's last choice, else Spanish for browsers set to Spanish, else English.
+  const { strings, languages } = globalThis.Komikan.i18n;
+  let language = (() => {
+    try {
+      const saved = localStorage.getItem(LANGUAGE_KEY);
+      if (languages.includes(saved)) return saved;
+    } catch {
+      // Storage may be unavailable; fall back to the browser's language.
+    }
+    return (navigator.language || "").toLowerCase().startsWith("es") ? "es" : "en";
+  })();
+  const t = (key, ...args) => {
+    const text = strings[language][key];
+    return typeof text === "function" ? text(...args) : text;
+  };
+
+  // Text that doesn't change during a game.
+  function translatePage() {
+    document.documentElement.lang = language;
+    document.querySelectorAll("[data-i18n]").forEach((node) => { node.textContent = t(node.dataset.i18n); });
+    document.querySelectorAll("[data-i18n-html]").forEach((node) => { node.innerHTML = t(node.dataset.i18nHtml); });
+    document.querySelectorAll("[data-i18n-aria]").forEach((node) => node.setAttribute("aria-label", t(node.dataset.i18nAria)));
+    el("description").setAttribute("content", t("description"));
+    const button = el("language");
+    button.textContent = t("languageButton");
+    button.setAttribute("aria-label", t("languageButtonLabel"));
+    button.lang = language === "es" ? "en" : "es";
+  }
+  translatePage();
+
   let engine, policies = {};
   const agentIds = {};
   try {
@@ -26,7 +58,7 @@
       agentIds[role] = agent.id;
     }
   } catch (error) {
-    statusEl.textContent = "Couldn't load the game data. If you opened this file directly, serve the folder over HTTP instead.";
+    statusEl.textContent = t("loadError");
     console.error(error);
     return;
   }
@@ -142,7 +174,7 @@
 
   function refreshRecordings() {
     const count = recordedGames.length;
-    el("recorded-count").textContent = count === 1 ? "1 game recorded" : `${count} games recorded`;
+    el("recorded-count").textContent = t("recordedCount", count);
     el("download-games").disabled = count === 0;
     el("clear-games").disabled = count === 0;
     el("recording-warning").hidden = storageWorks;
@@ -249,21 +281,17 @@
     }
   }
 
-  function roleName(role) {
-    return role === KOMIKELU ? "Komikelu" : "Trewas";
-  }
-
   function statusText(result) {
     const vsAgent = humans.length === 1;
-    if (result === DRAW) return "Draw: 200 turns have passed.";
+    if (result === DRAW) return t("draw");
     if (result !== null) {
-      const how = result === KOMIKELU ? `${roleName(result)} wins by eating ${state.captured} trewas.` : "Trewas win: the komikelu can't move.";
-      return vsAgent ? `${humans[0] === result ? "You win." : "The agent wins."} ${how}` : how;
+      const how = result === KOMIKELU ? t("komikeluWins", state.captured) : t("trewasWin");
+      return vsAgent ? `${humans[0] === result ? t("youWin") : t("computerWins")} ${how}` : how;
     }
-    if (vsAgent && state.toMove !== humans[0]) return `The agent is playing the ${roleName(state.toMove).toLowerCase()}…`;
-    const who = vsAgent ? "Your move" : `${roleName(state.toMove)} to move`;
-    if (state.inChain) return `${who}: keep jumping, or end your turn.`;
-    if (state.toMove === TREWAS && selected === null) return `${who}: choose a trewa.`;
+    if (vsAgent && state.toMove !== humans[0]) return t("computerPlaying", state.toMove);
+    const who = vsAgent ? t("yourMove") : t("toMove", state.toMove);
+    if (state.inChain) return t("keepJumping", who);
+    if (state.toMove === TREWAS && selected === null) return t("chooseTrewa", who);
     return `${who}.`;
   }
 
@@ -282,8 +310,8 @@
       group.classList.toggle("can-step", Boolean(destination && destination.over === null));
       group.classList.toggle("can-jump", Boolean(destination && destination.over !== null));
       const label = destination
-        ? `${destination.over === null ? "Move" : "Jump"} to point ${p}`
-        : `Select trewa on point ${p}`;
+        ? t(destination.over === null ? "moveTo" : "jumpTo", p)
+        : t("selectTrewa", p);
       setActive(p, Boolean(destination) || movable, label);
     });
 
@@ -305,7 +333,7 @@
     roleChoiceEl.disabled = !vsAgent;
     const missing = vsAgent && !policies[1 - Number(form.get("role"))];
     agentNoteEl.hidden = !missing;
-    agentNoteEl.textContent = missing ? "No trained agent is available for that side yet, so this would be a two-player game." : "";
+    agentNoteEl.textContent = missing ? t("noAgent") : "";
   }
 
   function checked(response) {
@@ -319,10 +347,24 @@
     if (isHumanTurn() && state.inChain) playAction(engine.STOP);
   });
 
+  el("language").addEventListener("click", () => {
+    language = language === "en" ? "es" : "en";
+    try {
+      localStorage.setItem(LANGUAGE_KEY, language);
+    } catch {
+      // The choice then lasts only for this visit.
+    }
+    translatePage();
+    refreshRecordings();
+    syncSetup();
+    clearTimeout(agentTimer);  // refresh() schedules the computer's move again, so it isn't played twice
+    refresh();
+  });
+
   el("download-games").addEventListener("click", downloadGames);
   el("clear-games").addEventListener("click", () => {
     const count = recordedGames.length;
-    if (!confirm(`Delete ${count === 1 ? "the recorded game" : `all ${count} recorded games`} from this browser? Download them first if you want to keep them.`)) return;
+    if (!confirm(t("confirmDelete", count))) return;
     recordedGames.length = 0;
     storeRecordedGames();
   });
