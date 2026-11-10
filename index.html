@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Komikan</title>
   <meta id="description" name="description" content="Play Komikan, a traditional Mapuche hunting board game, against a friend or the computer.">
-  <link rel="stylesheet" href="style.css?v=6">
+  <link rel="stylesheet" href="style.css?v=7">
 </head>
 <body>
   <main>
@@ -39,6 +39,11 @@
           <label><input type="radio" name="level" value="4" checked> <span data-i18n="medium">Medium</span></label>
           <label><input type="radio" name="level" value="5"> <span data-i18n="hard">Hard</span></label>
         </fieldset>
+        <fieldset id="captures-choice">
+          <legend data-i18n="capturesLegend">Komikelu wins after eating</legend>
+          <label><input type="radio" name="captures" value="8" checked> <span data-i18n="captures8">8 trewas (house rule)</span></label>
+          <label><input type="radio" name="captures" value="9"> <span data-i18n="captures9">9 trewas (original rules)</span></label>
+        </fieldset>
         <p id="agent-note" class="note" hidden></p>
         <button type="submit" class="secondary" data-i18n="newGame">New game</button>
       </form>
@@ -69,10 +74,12 @@
           <li data-i18n="rule2">Every piece moves one point along a line, forwards or backwards.</li>
           <li data-i18n="rule3">The komikelu can eat a trewa by jumping over it in a straight line onto an empty point. It may keep jumping in the same turn, or stop.</li>
           <li data-i18n="rule4">Trewas can't jump or eat. They win by leaving the komikelu with no possible move.</li>
-          <li data-i18n="rule5">The komikelu wins by eating 9 trewas.</li>
+          <li id="rule-captures">The komikelu wins by eating 8 trewas.</li>
           <li data-i18n="rule6">Added for this version: a game still going after 200 turns is a draw.</li>
         </ul>
       </details>
+
+      <p class="note house-rule" data-i18n="houseRuleNote"></p>
 
       <footer data-i18n-html="footer">
         Rules from <a href="https://www.chileparaninos.gob.cl/639/w3-article-639005.html">Chile para Niños</a> (CC BY-SA) and Matus (1920).
@@ -80,9 +87,9 @@
       </footer>
     </aside>
   </main>
-  <script src="engine.js?v=6"></script>
-  <script src="search.js?v=6"></script>
-  <script src="i18n.js?v=6"></script>
-  <script src="app.js?v=6"></script>
+  <script src="engine.js?v=7"></script>
+  <script src="search.js?v=7"></script>
+  <script src="i18n.js?v=7"></script>
+  <script src="app.js?v=7"></script>
 </body>
 </html>

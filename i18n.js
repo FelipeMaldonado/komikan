@@ -40,7 +40,13 @@
       rule2: "Every piece moves one point along a line, forwards or backwards.",
       rule3: "The komikelu can eat a trewa by jumping over it in a straight line onto an empty point. It may keep jumping in the same turn, or stop.",
       rule4: "Trewas can't jump or eat. They win by leaving the komikelu with no possible move.",
-      rule5: "The komikelu wins by eating 9 trewas.",
+      capturesLegend: "Komikelu wins after eating",
+      captures8: "8 trewas (house rule)",
+      captures9: "9 trewas (original rules)",
+      ruleCaptures: (n) =>
+        n === 9 ? "The komikelu wins by eating 9 trewas." : `The komikelu wins by eating ${n} trewas (house rule; the original rules say 9).`,
+      houseRuleNote:
+        "Why 8? The original rules end the game when the komikelu has eaten 9 trewas, and have no limit on turns. This version adds a draw after 200 turns, and with only 4 trewas left, the two outer corners of the triangle are the only places they can trap the komikelu. So once 8 are eaten, the trewas have almost no way to win and could only run out the clock. The house rule gives the komikelu the win at that point. Choose 9 to play by the original rules.",
       rule6: "Added for this version: a game still going after 200 turns is a draw.",
       footer:
         'Rules from <a href="https://www.chileparaninos.gob.cl/639/w3-article-639005.html">Chile para Niños</a> (CC BY-SA) and Matus (1920). Komikan is a game of the Mapuche people.',
@@ -93,7 +99,15 @@
       rule2: "Cada pieza se mueve un punto a lo largo de una línea, hacia adelante o hacia atrás.",
       rule3: "El komikelu puede comerse un trewa saltando sobre él en línea recta hasta un punto vacío. Puede seguir saltando en el mismo turno, o detenerse.",
       rule4: "Los trewas no pueden saltar ni comer. Ganan si dejan al komikelu sin ningún movimiento posible.",
-      rule5: "El komikelu gana al comerse 9 trewas.",
+      capturesLegend: "El komikelu gana al comerse",
+      captures8: "8 trewas (regla de la casa)",
+      captures9: "9 trewas (reglas originales)",
+      ruleCaptures: (n) =>
+        n === 9
+          ? "El komikelu gana al comerse 9 trewas."
+          : `El komikelu gana al comerse ${n} trewas (regla de la casa; las reglas originales dicen 9).`,
+      houseRuleNote:
+        "¿Por qué 8? Las reglas originales terminan el juego cuando el komikelu se ha comido 9 trewas, y no tienen límite de turnos. Esta versión agrega un empate después de 200 turnos, y con solo 4 trewas, los únicos lugares donde pueden atrapar al komikelu son las dos esquinas exteriores del triángulo. Así, una vez que se ha comido 8, los trewas casi no tienen cómo ganar y solo podrían dejar pasar el tiempo. La regla de la casa le da la victoria al komikelu en ese momento. Elige 9 para jugar con las reglas originales.",
       rule6: "Agregado en esta versión: un juego que sigue después de 200 turnos termina en empate.",
       footer:
         'Reglas de <a href="https://www.chileparaninos.gob.cl/639/w3-article-639005.html">Chile para Niños</a> (CC BY-SA) y Matus (1920). El komikan es un juego del pueblo Mapuche.',
