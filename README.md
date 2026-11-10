@@ -93,7 +93,9 @@ depth 5 (`minimax:5:squeeze`, see "Search without a network"), not the trained a
 the computer's komikelu is the trained agent. Options in the address, for testing: `?squeeze=4` for another depth, `?search=1600`
 for Monte Carlo search, `?trewas=agent` for the trained trewas, and `?record` to record games outside `localhost`.
 
-The live site is served from the `gh-pages` branch, which holds only `web/`. To update it after committing to `main`:
+The live site is served from the `gh-pages` branch, which holds only `web/`. Browsers keep its files for up to 10 minutes, so
+when a change to `web/` goes live, raise the `?v=` number on the file links in `web/index.html` too. To update it after committing
+to `main`:
 
 ```bash
 git push origin "$(git subtree split --prefix web main):refs/heads/gh-pages"

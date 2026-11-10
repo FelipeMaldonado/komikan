@@ -144,4 +144,5 @@ def test_page_text_exists_in_both_languages():
     used = set(re.findall(r'data-i18n(?:-html|-aria)?="(\w+)"', html)) | set(re.findall(r'\bt\("(\w+)"', app))
     used |= {"moveTo", "jumpTo", "languageButton", "languageButtonLabel", "description"}  # chosen in code or set by key
     assert used <= set(keys["en"]), used - set(keys["en"])
-    assert html.index('src="engine.js"') < html.index('src="i18n.js"') < html.index('src="app.js"')  # engine.js replaces Komikan
+    order = [re.search(rf'src="{name}\.js(\?v=\d+)?"', html).start() for name in ("engine", "i18n", "app")]
+    assert order == sorted(order)  # engine.js replaces Komikan, so i18n.js must come after it
