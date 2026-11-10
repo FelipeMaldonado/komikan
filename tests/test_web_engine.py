@@ -129,3 +129,19 @@ def test_js_policy_matches_numpy_policy(js):
     probe = "(function(){const s=engine.initialState();const l=engine.legalActions(s);const c={};for(let i=0;i<400;i++){const a=policy.selectAction(s,Math.random);c[a]=(c[a]||0)+1;}return JSON.stringify(c);})()"
     counts = json.loads(js.eval(probe))
     assert max(counts, key=counts.get) == str(top)
+
+
+def test_page_text_exists_in_both_languages():
+    """Every key the page uses has English and Spanish text, and both languages have the same keys."""
+    import re
+
+    ctx = quickjs.Context()
+    ctx.eval((ENGINE_JS.parent / "i18n.js").read_text())
+    keys = json.loads(ctx.eval("JSON.stringify(Object.fromEntries(Komikan.i18n.languages.map((l) => [l, Object.keys(Komikan.i18n.strings[l]).sort()])))"))
+    assert set(keys) == {"en", "es"} and keys["en"] == keys["es"]
+    html = (ENGINE_JS.parent / "index.html").read_text()
+    app = (ENGINE_JS.parent / "app.js").read_text()
+    used = set(re.findall(r'data-i18n(?:-html|-aria)?="(\w+)"', html)) | set(re.findall(r'\bt\("(\w+)"', app))
+    used |= {"moveTo", "jumpTo", "languageButton", "languageButtonLabel", "description"}  # chosen in code or set by key
+    assert used <= set(keys["en"]), used - set(keys["en"])
+    assert html.index('src="engine.js"') < html.index('src="i18n.js"') < html.index('src="app.js"')  # engine.js replaces Komikan

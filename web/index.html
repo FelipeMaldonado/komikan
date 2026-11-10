@@ -4,68 +4,71 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Komikan</title>
-  <meta name="description" content="Play Komikan, a traditional Mapuche hunting board game, against a friend or the computer.">
+  <meta id="description" name="description" content="Play Komikan, a traditional Mapuche hunting board game, against a friend or the computer.">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <main>
     <section class="board-area">
-      <svg id="board" role="group" aria-label="Komikan board"></svg>
+      <svg id="board" role="group" aria-label="Komikan board" data-i18n-aria="board"></svg>
     </section>
 
     <aside class="panel">
       <header>
-        <h1>Komikan</h1>
-        <p class="lede">A Mapuche hunting game. One komikelu, “the one who eats everything”, against twelve trewas, the dogs that corner it.</p>
+        <div class="title-row">
+          <h1>Komikan</h1>
+          <button id="language" type="button" class="secondary language" lang="es" aria-label="Cambiar a español">Español</button>
+        </div>
+        <p class="lede" data-i18n="lede">A Mapuche hunting game. One komikelu, “the one who eats everything”, against twelve trewas, the dogs that corner it.</p>
       </header>
 
       <form id="setup">
         <fieldset>
-          <legend>Opponent</legend>
-          <label><input type="radio" name="mode" value="agent" checked> Computer</label>
-          <label><input type="radio" name="mode" value="human"> Another person, on this device</label>
+          <legend data-i18n="opponent">Opponent</legend>
+          <label><input type="radio" name="mode" value="agent" checked> <span data-i18n="computer">Computer</span></label>
+          <label><input type="radio" name="mode" value="human"> <span data-i18n="anotherPerson">Another person, on this device</span></label>
         </fieldset>
         <fieldset id="role-choice">
-          <legend>You play as</legend>
-          <label><input type="radio" name="role" value="0" checked> Komikelu</label>
-          <label><input type="radio" name="role" value="1"> Trewas</label>
+          <legend data-i18n="playAs">You play as</legend>
+          <label><input type="radio" name="role" value="0" checked> <span data-i18n="komikelu">Komikelu</span></label>
+          <label><input type="radio" name="role" value="1"> <span data-i18n="trewas">Trewas</span></label>
         </fieldset>
         <p id="agent-note" class="note" hidden></p>
-        <button type="submit" class="secondary">New game</button>
+        <button type="submit" class="secondary" data-i18n="newGame">New game</button>
       </form>
 
       <div class="status">
         <p id="status" aria-live="polite"></p>
-        <button id="end-turn" type="button" hidden>End turn</button>
+        <button id="end-turn" type="button" hidden data-i18n="endTurn">End turn</button>
         <dl>
-          <div><dt>Trewas eaten</dt><dd id="captured"></dd></div>
-          <div><dt>Turn</dt><dd id="turn"></dd></div>
+          <div><dt data-i18n="trewasEaten">Trewas eaten</dt><dd id="captured"></dd></div>
+          <div><dt data-i18n="turn">Turn</dt><dd id="turn"></dd></div>
         </dl>
       </div>
 
-      <section id="recordings" class="recordings" aria-label="Recorded games">
+      <section id="recordings" class="recordings" aria-label="Recorded games" data-i18n-aria="recordedGames">
         <p id="recorded-count" class="recorded-count"></p>
-        <p class="note">Finished games stay in this browser unless you download them. Nothing is sent anywhere.</p>
-        <p id="recording-warning" class="note" hidden>This browser isn't keeping them, so they'll be lost when you close the page. Download them before you leave.</p>
+        <p class="note" data-i18n="recordingNote">Finished games stay in this browser unless you download them. Nothing is sent anywhere.</p>
+        <p id="recording-warning" class="note" hidden data-i18n="recordingWarning">This browser isn't keeping them, so they'll be lost when you close the page. Download them before you leave.</p>
         <div class="recording-actions">
-          <button id="download-games" type="button" class="secondary">Download</button>
-          <button id="clear-games" type="button" class="secondary">Delete all</button>
+          <button id="download-games" type="button" class="secondary" data-i18n="download">Download</button>
+          <button id="clear-games" type="button" class="secondary" data-i18n="deleteAll">Delete all</button>
         </div>
       </section>
 
       <details>
-        <summary>How to play</summary>
+        <summary data-i18n="howToPlay">How to play</summary>
         <ul>
-          <li>The komikelu moves first. Then players take turns.</li>
-          <li>Every piece moves one point along a line, forwards or backwards.</li>
-          <li>The komikelu can eat a trewa by jumping over it in a straight line onto an empty point. It may keep jumping in the same turn, or stop.</li>
-          <li>Trewas can't jump or eat. They win by leaving the komikelu with no possible move.</li>
-          <li>The komikelu wins by eating 9 trewas.</li>
-          <li>Added for this version: a game still going after 200 turns is a draw.</li>
+          <li data-i18n="rule1">The komikelu moves first. Then players take turns.</li>
+          <li data-i18n="rule2">Every piece moves one point along a line, forwards or backwards.</li>
+          <li data-i18n="rule3">The komikelu can eat a trewa by jumping over it in a straight line onto an empty point. It may keep jumping in the same turn, or stop.</li>
+          <li data-i18n="rule4">Trewas can't jump or eat. They win by leaving the komikelu with no possible move.</li>
+          <li data-i18n="rule5">The komikelu wins by eating 9 trewas.</li>
+          <li data-i18n="rule6">Added for this version: a game still going after 200 turns is a draw.</li>
         </ul>
       </details>
 
-      <footer>
+      <footer data-i18n-html="footer">
         Rules from <a href="https://www.chileparaninos.gob.cl/639/w3-article-639005.html">Chile para Niños</a> (CC BY-SA) and Matus (1920).
         Komikan is a game of the Mapuche people.
       </footer>
@@ -73,6 +76,7 @@
   </main>
   <script src="engine.js"></script>
   <script src="search.js"></script>
+  <script src="i18n.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

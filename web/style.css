@@ -92,6 +92,8 @@ main {
 
 h1 { margin: 0; font: 600 38px/1.1 ui-serif, Georgia, "Times New Roman", serif; }
 .lede { margin: 8px 0 0; color: var(--muted); }
+.title-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+button.language { min-height: 34px; padding: 0 12px; font-size: 14px; flex: none; }
 
 form { display: flex; flex-direction: column; gap: 14px; }
 fieldset { margin: 0; padding: 0; border: 0; display: flex; flex-direction: column; gap: 4px; }
