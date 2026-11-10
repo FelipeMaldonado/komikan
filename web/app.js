@@ -63,24 +63,39 @@
     return;
   }
 
-  // The trewas opponent is a search with no network (search.js): best-play search with the squeeze score at depth 5, the
-  // strongest trewas found so far. Not linked anywhere, the address can pick another one for testing. Recorded games name
-  // each by its settings, as the Python bot spec does.
-  //   ?squeeze=<depth>      the same search at another depth (4 and 5 are tested).
+  // The trewas opponent is a search with no network (search.js): best-play search with the squeeze score, at the depth the
+  // difficulty choice sets (easy 3, medium 4, hard 5; all tested). Not linked anywhere, the address can override it for
+  // testing, which hides the choice. Recorded games name each opponent by its settings, as the Python bot spec does.
+  //   ?squeeze=<depth>      this search at a fixed depth.
   //   ?search=<simulations> Monte Carlo tree search, which shuts the komikelu in but doesn't close the trap.
   //   ?trewas=agent         the trained PPO agent in data/trewas.bin.
   const params = new URLSearchParams(location.search);
   const searchSimulations = Math.min(Number(params.get("search")) || 0, 100000);
   const trainedTrewas = params.get("trewas") === "agent";
-  const squeezeDepth = trainedTrewas || searchSimulations > 0 ? 0 : Math.min(Number(params.get("squeeze")) || 5, 6);
+  const fixedDepth = Math.min(Number(params.get("squeeze")) || 0, 6);
+  const useLevels = !trainedTrewas && searchSimulations === 0 && fixedDepth === 0;
+  const DIFFICULTY_KEY = "komikan-difficulty";
+  el("difficulty").hidden = !useLevels;
+  try {
+    const saved = localStorage.getItem(DIFFICULTY_KEY);
+    const input = saved && setupEl.querySelector(`input[name="level"][value="${CSS.escape(saved)}"]`);
+    if (input) input.checked = true;
+  } catch {
+    // Storage may be unavailable; keep the default.
+  }
+
+  function useSqueeze(depth) {
+    const search = Komikan.createMinimax(engine, { depth });
+    policies[TREWAS] = { selectAction: (s) => search.selectAction(s) };
+    agentIds[TREWAS] = `minimax:${depth}:squeeze`;
+    document.title = `Komikan (trewas: squeeze ${depth})`;
+  }
+
   // Games are recorded locally, or on the live site only with ?record.
   const recording = params.has("record") || ["localhost", "127.0.0.1"].includes(location.hostname);
   el("recordings").hidden = !recording;
-  if (squeezeDepth > 0) {
-    const search = Komikan.createMinimax(engine, { depth: squeezeDepth });
-    policies[TREWAS] = { selectAction: (s) => search.selectAction(s) };
-    agentIds[TREWAS] = `minimax:${squeezeDepth}:squeeze`;
-    document.title += ` (trewas: squeeze ${squeezeDepth})`;
+  if (fixedDepth > 0) {
+    useSqueeze(fixedDepth);
   } else if (searchSimulations > 0) {
     const search = Komikan.createSearch(engine, { simulations: searchSimulations, playout: 2, draw: 0.5 });
     policies[TREWAS] = { selectAction: (s) => search.selectAction(s) };
@@ -206,6 +221,7 @@
     const form = new FormData(setupEl);
     const vsAgent = form.get("mode") === "agent";
     const humanRole = Number(form.get("role"));
+    if (useLevels) useSqueeze(Number(form.get("level")));
     humans = vsAgent && policies[1 - humanRole] ? [humanRole] : [KOMIKELU, TREWAS];
     state = engine.initialState();
     selected = null;
@@ -331,6 +347,7 @@
     const form = new FormData(setupEl);
     const vsAgent = form.get("mode") === "agent";
     roleChoiceEl.disabled = !vsAgent;
+    el("difficulty").disabled = !vsAgent || Number(form.get("role")) !== KOMIKELU;  // only the computer's trewas have levels
     const missing = vsAgent && !policies[1 - Number(form.get("role"))];
     agentNoteEl.hidden = !missing;
     agentNoteEl.textContent = missing ? t("noAgent") : "";
@@ -342,7 +359,16 @@
   }
 
   setupEl.addEventListener("submit", (e) => { e.preventDefault(); newGame(); });
-  setupEl.addEventListener("change", syncSetup);
+  setupEl.addEventListener("change", (e) => {
+    if (e.target.name === "level") {
+      try {
+        localStorage.setItem(DIFFICULTY_KEY, e.target.value);
+      } catch {
+        // The choice then lasts only for this visit.
+      }
+    }
+    syncSetup();
+  });
   endTurnEl.addEventListener("click", () => {
     if (isHumanTurn() && state.inChain) playAction(engine.STOP);
   });

@@ -88,9 +88,10 @@ uv run komikan-export-web
 python3 -m http.server 8321 --directory web
 ```
 
-Then open http://localhost:8321. When you play the komikelu, the computer's trewas are best-play search with the squeeze score at
-depth 5 (`minimax:5:squeeze`, see "Search without a network"), not the trained agent, which is much weaker. When you play the trewas,
-the computer's komikelu is the trained agent. Options in the address, for testing: `?squeeze=4` for another depth, `?search=1600`
+Then open http://localhost:8321. When you play the komikelu, the computer's trewas are best-play search with the squeeze score
+(see "Search without a network"), not the trained agent, which is much weaker. Its difficulty sets the depth: easy 3, medium 4
+(the default) and hard 5. Against the trained komikelu agents these won about 49%, 87% and 96% of games. When you play the trewas,
+the computer's komikelu is the trained agent. Options in the address, for testing: `?squeeze=<depth>` for a fixed depth, `?search=1600`
 for Monte Carlo search, `?trewas=agent` for the trained trewas, and `?record` to record games outside `localhost`.
 
 The live site is served from the `gh-pages` branch, which holds only `web/`. Browsers keep its files for up to 10 minutes, so

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Komikan</title>
   <meta id="description" name="description" content="Play Komikan, a traditional Mapuche hunting board game, against a friend or the computer.">
-  <link rel="stylesheet" href="style.css?v=5">
+  <link rel="stylesheet" href="style.css?v=6">
 </head>
 <body>
   <main>
@@ -32,6 +32,12 @@
           <legend data-i18n="playAs">You play as</legend>
           <label><input type="radio" name="role" value="0" checked> <span data-i18n="komikelu">Komikelu</span></label>
           <label><input type="radio" name="role" value="1"> <span data-i18n="trewas">Trewas</span></label>
+        </fieldset>
+        <fieldset id="difficulty">
+          <legend data-i18n="difficulty">Difficulty</legend>
+          <label><input type="radio" name="level" value="3"> <span data-i18n="easy">Easy</span></label>
+          <label><input type="radio" name="level" value="4" checked> <span data-i18n="medium">Medium</span></label>
+          <label><input type="radio" name="level" value="5"> <span data-i18n="hard">Hard</span></label>
         </fieldset>
         <p id="agent-note" class="note" hidden></p>
         <button type="submit" class="secondary" data-i18n="newGame">New game</button>
@@ -74,9 +80,9 @@
       </footer>
     </aside>
   </main>
-  <script src="engine.js?v=5"></script>
-  <script src="search.js?v=5"></script>
-  <script src="i18n.js?v=5"></script>
-  <script src="app.js?v=5"></script>
+  <script src="engine.js?v=6"></script>
+  <script src="search.js?v=6"></script>
+  <script src="i18n.js?v=6"></script>
+  <script src="app.js?v=6"></script>
 </body>
 </html>
