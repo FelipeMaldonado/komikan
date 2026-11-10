@@ -59,9 +59,9 @@
     es: {
       languageButton: "English",
       languageButtonLabel: "Switch to English",
-      description: "Juega komikan, un juego de tablero tradicional de caza mapuche, contra otra persona o contra el computador.",
+      description: "Juega komikan, un juego de tablero tradicional de caza Mapuche, contra otra persona o contra el computador.",
       board: "Tablero de komikan",
-      lede: "Un juego de caza mapuche. Un komikelu, “el que se lo come todo”, contra doce trewas, los perros que lo acorralan.",
+      lede: "Un juego de caza Mapuche. Un komikelu, “el que se lo come todo”, contra doce trewas, los perros que lo acorralan.",
       opponent: "Rival",
       computer: "Computador",
       anotherPerson: "Otra persona, en este dispositivo",
@@ -88,7 +88,7 @@
       rule5: "El komikelu gana al comerse 9 trewas.",
       rule6: "Agregado en esta versión: un juego que sigue después de 200 turnos termina en empate.",
       footer:
-        'Reglas de <a href="https://www.chileparaninos.gob.cl/639/w3-article-639005.html">Chile para Niños</a> (CC BY-SA) y Matus (1920). El komikan es un juego del pueblo mapuche.',
+        'Reglas de <a href="https://www.chileparaninos.gob.cl/639/w3-article-639005.html">Chile para Niños</a> (CC BY-SA) y Matus (1920). El komikan es un juego del pueblo Mapuche.',
       loadError: "No se pudieron cargar los datos del juego. Si abriste este archivo directamente, sirve la carpeta por HTTP.",
       noAgent: "Todavía no hay un rival computador para ese lado, así que sería un juego de dos personas.",
       draw: "Empate: pasaron 200 turnos.",
