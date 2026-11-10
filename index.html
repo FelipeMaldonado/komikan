@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Komikan</title>
-  <meta name="description" content="Play Komikan, a traditional Mapuche hunting board game, against a friend or a trained reinforcement-learning agent.">
+  <meta name="description" content="Play Komikan, a traditional Mapuche hunting board game, against a friend or the computer.">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -22,7 +22,7 @@
       <form id="setup">
         <fieldset>
           <legend>Opponent</legend>
-          <label><input type="radio" name="mode" value="agent" checked> Trained agent</label>
+          <label><input type="radio" name="mode" value="agent" checked> Computer</label>
           <label><input type="radio" name="mode" value="human"> Another person, on this device</label>
         </fieldset>
         <fieldset id="role-choice">
@@ -43,6 +43,16 @@
         </dl>
       </div>
 
+      <section id="recordings" class="recordings" aria-label="Recorded games">
+        <p id="recorded-count" class="recorded-count"></p>
+        <p class="note">Finished games stay in this browser unless you download them. Nothing is sent anywhere.</p>
+        <p id="recording-warning" class="note" hidden>This browser isn't keeping them, so they'll be lost when you close the page. Download them before you leave.</p>
+        <div class="recording-actions">
+          <button id="download-games" type="button" class="secondary">Download</button>
+          <button id="clear-games" type="button" class="secondary">Delete all</button>
+        </div>
+      </section>
+
       <details>
         <summary>How to play</summary>
         <ul>
@@ -56,12 +66,13 @@
       </details>
 
       <footer>
-        Rules from <a href="https://www.chileparaninos.cl">Chile para Niños</a> (CC BY-SA) and Matus (1920).
+        Rules from <a href="https://www.chileparaninos.gob.cl/639/w3-article-639005.html">Chile para Niños</a> (CC BY-SA) and Matus (1920).
         Komikan is a game of the Mapuche people.
       </footer>
     </aside>
   </main>
   <script src="engine.js"></script>
+  <script src="search.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

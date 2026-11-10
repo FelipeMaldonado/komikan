@@ -10,7 +10,9 @@
   const statusEl = el("status"), boardEl = el("board"), endTurnEl = el("end-turn");
   const setupEl = el("setup"), roleChoiceEl = el("role-choice"), agentNoteEl = el("agent-note");
 
+  const STORAGE_KEY = "komikan-recorded-games";
   let engine, policies = {};
+  const agentIds = {};
   try {
     const [board, agents] = await Promise.all([
       fetch("data/board.json").then(checked).then((r) => r.json()),
@@ -19,12 +21,39 @@
     engine = createEngine(board);
     for (const [name, agent] of Object.entries(agents)) {
       const values = new Float32Array(await fetch(`data/${agent.file}`).then(checked).then((r) => r.arrayBuffer()));
-      policies[name === "komikelu" ? KOMIKELU : TREWAS] = createPolicy(engine, values, agent.shapes);
+      const role = name === "komikelu" ? KOMIKELU : TREWAS;
+      policies[role] = createPolicy(engine, values, agent.shapes);
+      agentIds[role] = agent.id;
     }
   } catch (error) {
     statusEl.textContent = "Couldn't load the game data. If you opened this file directly, serve the folder over HTTP instead.";
     console.error(error);
     return;
+  }
+
+  // The trewas opponent is a search with no network (search.js): best-play search with the squeeze score at depth 5, the
+  // strongest trewas found so far. Not linked anywhere, the address can pick another one for testing. Recorded games name
+  // each by its settings, as the Python bot spec does.
+  //   ?squeeze=<depth>      the same search at another depth (4 and 5 are tested).
+  //   ?search=<simulations> Monte Carlo tree search, which shuts the komikelu in but doesn't close the trap.
+  //   ?trewas=agent         the trained PPO agent in data/trewas.bin.
+  const params = new URLSearchParams(location.search);
+  const searchSimulations = Math.min(Number(params.get("search")) || 0, 100000);
+  const trainedTrewas = params.get("trewas") === "agent";
+  const squeezeDepth = trainedTrewas || searchSimulations > 0 ? 0 : Math.min(Number(params.get("squeeze")) || 5, 6);
+  // Games are recorded locally, or on the live site only with ?record.
+  const recording = params.has("record") || ["localhost", "127.0.0.1"].includes(location.hostname);
+  el("recordings").hidden = !recording;
+  if (squeezeDepth > 0) {
+    const search = Komikan.createMinimax(engine, { depth: squeezeDepth });
+    policies[TREWAS] = { selectAction: (s) => search.selectAction(s) };
+    agentIds[TREWAS] = `minimax:${squeezeDepth}:squeeze`;
+    document.title += ` (trewas: squeeze ${squeezeDepth})`;
+  } else if (searchSimulations > 0) {
+    const search = Komikan.createSearch(engine, { simulations: searchSimulations, playout: 2, draw: 0.5 });
+    policies[TREWAS] = { selectAction: (s) => search.selectAction(s) };
+    agentIds[TREWAS] = `mcts:${searchSimulations}:0.5:2`;
+    document.title += ` (trewas: search ${searchSimulations})`;
   }
 
   const px = ([x, y]) => [(x + 6) * SCALE + MARGIN, (y + 6) * SCALE + MARGIN];
@@ -68,6 +97,65 @@
 
   // Game state.
   let state, humans, selected, pieces, agentTimer, lastTurnMover;
+  let gameActions, gameRecorded;
+
+  // Finished games are kept in this browser only, and leave it only through the download button.
+  const recordedGames = loadRecordedGames();
+  let storageWorks = true;
+
+  function loadRecordedGames() {
+    try {
+      const games = JSON.parse(localStorage.getItem(STORAGE_KEY));
+      return Array.isArray(games) ? games : [];
+    } catch {
+      return [];
+    }
+  }
+
+  function storeRecordedGames() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(recordedGames));
+      storageWorks = true;
+    } catch {
+      storageWorks = false;
+    }
+    refreshRecordings();
+  }
+
+  function recordGame(result) {
+    gameRecorded = true;
+    const agentRole = humans.length === 1 ? 1 - humans[0] : null;
+    recordedGames.push({
+      finishedAt: new Date().toISOString(),
+      humanRoles: humans,
+      opponentAgent: agentRole === null ? null : agentIds[agentRole],
+      capturesToWin: engine.rules.capturesToWin,
+      maxPlies: engine.rules.maxPlies,
+      actionCount: engine.actions.length,
+      actions: gameActions,
+      outcome: result,
+      captured: state.captured,
+      plies: state.plies,
+    });
+    storeRecordedGames();
+  }
+
+  function refreshRecordings() {
+    const count = recordedGames.length;
+    el("recorded-count").textContent = count === 1 ? "1 game recorded" : `${count} games recorded`;
+    el("download-games").disabled = count === 0;
+    el("clear-games").disabled = count === 0;
+    el("recording-warning").hidden = storageWorks;
+  }
+
+  function downloadGames() {
+    const file = JSON.stringify({ format: "komikan-games", version: 1, games: recordedGames });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(new Blob([file], { type: "application/json" }));
+    link.download = `komikan-games-${recordedGames.length}.json`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+  }
 
   function placePiece(node, point) {
     const [x, y] = px(engine.coords[point]);
@@ -90,6 +178,8 @@
     state = engine.initialState();
     selected = null;
     lastTurnMover = null;
+    gameActions = [];
+    gameRecorded = false;
     trailLayer.replaceChildren();
     pieceLayer.replaceChildren();
     pieces = new Map();
@@ -116,6 +206,7 @@
       placePiece(node, dst);
     }
     lastTurnMover = state.toMove;
+    gameActions.push(action);
     state = engine.applyAction(state, action);
     selected = null;
     refresh();
@@ -178,6 +269,7 @@
 
   function refresh() {
     const result = engine.outcome(state);
+    if (result !== null && !gameRecorded && recording) recordGame(result);
     const human = result === null && humans.includes(state.toMove);
     const moves = human ? legalMoves() : [];
     const from = state.toMove === KOMIKELU ? state.komikelu : selected;
@@ -227,6 +319,15 @@
     if (isHumanTurn() && state.inChain) playAction(engine.STOP);
   });
 
+  el("download-games").addEventListener("click", downloadGames);
+  el("clear-games").addEventListener("click", () => {
+    const count = recordedGames.length;
+    if (!confirm(`Delete ${count === 1 ? "the recorded game" : `all ${count} recorded games`} from this browser? Download them first if you want to keep them.`)) return;
+    recordedGames.length = 0;
+    storeRecordedGames();
+  });
+
   syncSetup();
+  refreshRecordings();
   newGame();
 })();
