@@ -6,7 +6,7 @@ import argparse
 from dataclasses import dataclass
 
 from .bots import Bot, make_bot
-from .game import DEFAULT_RULES, DRAW, KOMIKELU, TREWAS, Rules, apply_action, initial_state, outcome
+from .game import DEFAULT_RULES, DRAW, KOMIKELU, TREWAS, GameState, Rules, apply_action, initial_state, outcome
 
 
 @dataclass
@@ -34,9 +34,9 @@ class MatchResult:
         )
 
 
-def play_game(komikelu: Bot, trewas: Bot, rules: Rules = DEFAULT_RULES) -> tuple[int, int, int]:
-    """Returns (outcome, captures, turns)."""
-    state = initial_state()
+def play_game(komikelu: Bot, trewas: Bot, rules: Rules = DEFAULT_RULES, start: GameState | None = None) -> tuple[int, int, int]:
+    """Returns (outcome, captures, turns). Plays from `start` if given, else from the initial position."""
+    state = start or initial_state()
     while (result := outcome(state, rules)) is None:
         bot = komikelu if state.to_move == KOMIKELU else trewas
         state = apply_action(state, bot(state), rules)

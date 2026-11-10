@@ -32,6 +32,23 @@ SNAPSHOT_SHARE = 0.4
 RECENT_SNAPSHOTS = 5
 
 
+def make_ppo(env, seed: int, learning_rate: float = 3e-4, ent_coef: float = 0.01) -> MaskablePPO:
+    return MaskablePPO(
+        "MlpPolicy",
+        env,
+        n_steps=1024,
+        batch_size=1024,
+        n_epochs=4,
+        learning_rate=learning_rate,
+        gamma=0.995,
+        gae_lambda=0.95,
+        ent_coef=ent_coef,
+        policy_kwargs={"net_arch": [256, 256], "activation_fn": torch.nn.ReLU},
+        seed=seed,
+        device="cpu",
+    )
+
+
 def _make_env(role: str, seed: int):
     def init():
         torch.set_num_threads(1)
@@ -82,20 +99,7 @@ def main() -> None:
     for role in roles:
         name = ROLE_NAMES[role]
         envs[role] = SubprocVecEnv([_make_env(name, args.seed + 100 * role + i) for i in range(args.envs)])
-        models[role] = MaskablePPO(
-            "MlpPolicy",
-            envs[role],
-            n_steps=1024,
-            batch_size=1024,
-            n_epochs=4,
-            learning_rate=3e-4,
-            gamma=0.995,
-            gae_lambda=0.95,
-            ent_coef=0.01,
-            policy_kwargs={"net_arch": [256, 256], "activation_fn": torch.nn.ReLU},
-            seed=args.seed + role,
-            device="cpu",
-        )
+        models[role] = make_ppo(envs[role], seed=args.seed + role)
 
     snapshots: dict[int, list[Path]] = {KOMIKELU: [], TREWAS: []}
     best = {KOMIKELU: float("-inf"), TREWAS: float("-inf")}

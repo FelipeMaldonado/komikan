@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from typing import Sequence
 
@@ -66,6 +67,16 @@ class RewardConfig:
     confine: float = 0.5  # the komikelu's reachable share of the board
     advance: float = 0.02  # per board row advanced by a trewa
     corner: float = 0.02  # per komikelu option removed
+    relative_advance: bool = False  # a trewa earns nothing for advancing past the komikelu
+
+
+def trewas_potential(state: GameState, rules: Rules = DEFAULT_RULES, cfg: RewardConfig = RewardConfig()) -> float:
+    """The shaping potential for the trewas: higher when they are further forward and the komikelu has less room."""
+    floor = COORDS[state.komikelu][1] if cfg.relative_advance else -math.inf
+    height = sum(max(COORDS[p][1], floor) for p in points_of(state.trewas)) / _ROW_HEIGHT
+    options = len(_komikelu_options(state, rules))
+    reach = komikelu_reach(state) / NUM_POINTS
+    return -cfg.advance * height - cfg.corner * options - cfg.confine * reach
 
 
 class KomikanEnv(gym.Env):
@@ -104,6 +115,23 @@ class KomikanEnv(gym.Env):
         self.set_opponents(opponents or ["random"], opponent_weights)
         self.state = initial_state()
         self.opponent: Bot = RandomBot(rules=rules)
+        self._start_positions: list[GameState] = []
+        self._start_share = 0.0
+
+    def set_start_positions(self, positions: Sequence[GameState], share: float) -> None:
+        """Start `share` of the episodes from a random one of these positions, where this role must be to move."""
+        if not 0.0 <= share <= 1.0:
+            raise ValueError(f"share must be between 0 and 1, got {share}")
+        for state in positions:
+            if state.to_move != self.role or outcome(state, self.rules) is not None:
+                raise ValueError(f"not an unfinished position with this role to move: {state}")
+        self._start_positions = list(positions)
+        self._start_share = share if self._start_positions else 0.0
+
+    def _draw_start(self) -> GameState:
+        if self.np_random.random() < self._start_share:
+            return self._start_positions[self.np_random.integers(len(self._start_positions))]
+        return initial_state()
 
     def set_opponents(self, opponents: Sequence[str | Bot], weights: Sequence[float] | None = None) -> None:
         """Replace the opponent pool. It takes effect from the next episode."""
@@ -127,7 +155,7 @@ class KomikanEnv(gym.Env):
         if seed is not None:
             self._cache.clear()  # rebuild bots so that their randomness follows the seed too
         self.opponent = self._draw_opponent()
-        self.state = initial_state()
+        self.state = self._draw_start()
         self._play_opponent()
         return encode_observation(self.state, self.rules), {}
 
@@ -163,11 +191,7 @@ class KomikanEnv(gym.Env):
         return self._trewas_potential(after) - self._trewas_potential(before) - cfg.capture * captures
 
     def _trewas_potential(self, state: GameState) -> float:
-        cfg = self.reward_config
-        height = sum(COORDS[p][1] for p in points_of(state.trewas)) / _ROW_HEIGHT
-        options = len(_komikelu_options(state, self.rules))
-        reach = komikelu_reach(state) / NUM_POINTS
-        return -cfg.advance * height - cfg.corner * options - cfg.confine * reach
+        return trewas_potential(state, self.rules, self.reward_config)
 
     def render(self):
         if self.render_mode == "ansi":

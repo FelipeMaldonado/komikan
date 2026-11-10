@@ -163,6 +163,23 @@ def test_forward_only_variant():
     assert Action(sq(1, 1), sq(1, 2), None) in {ACTIONS[a] for a in legal_actions(s, DEFAULT_RULES)}
 
 
+def test_no_backward_variant_allows_sideways_but_not_back():
+    from komikan.board import COORDS
+    from komikan.game import KOMIKELU, RULE_VARIANTS
+
+    rules = RULE_VARIANTS["no-backward"]
+    s = GameState(tri(2, 0), bitmask([sq(1, 1), sq(4, 4)]), TREWAS, False, 0, 0)
+    moves = {ACTIONS[a] for a in legal_actions(s, rules)}
+    assert Action(sq(1, 1), sq(1, 0), None) in moves
+    assert Action(sq(1, 1), sq(0, 1), None) in moves  # sideways
+    assert Action(sq(1, 1), sq(1, 2), None) not in moves  # backwards
+    for a in moves:
+        assert COORDS[a.dst][1] <= COORDS[a.src][1]
+    assert legal_actions(s, Rules(trewas_forward_only=True, trewas_no_backward=True)) == legal_actions(s, RULE_VARIANTS["forward-only"])
+    k = s._replace(to_move=KOMIKELU)
+    assert legal_actions(k, rules) == legal_actions(k)  # the komikelu is unaffected
+
+
 def test_reach_is_confined_by_a_wall():
     assert komikelu_reach(k_state(tri(2, 0), [])) == NUM_POINTS
     # Doubled apex lines: the komikelu cannot step past or jump out of the triangle.

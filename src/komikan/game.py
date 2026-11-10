@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import NamedTuple
 
-from .board import COORDS, EDGES, JUMPS, KOMIKELU_START, NEIGHBORS, NUM_POINTS, TREWAS_START
+from .board import COORDS, EDGES, JUMPS, KOMIKELU_START, MIRROR_POINT, NEIGHBORS, NUM_POINTS, TREWAS_START
 
 KOMIKELU, TREWAS, DRAW = 0, 1, 2
 ROLE_NAMES = {KOMIKELU: "komikelu", TREWAS: "trewas"}
@@ -17,9 +17,15 @@ class Rules:
     captures_to_win: int = 9
     max_plies: int = 200  # turns before a draw; not in the traditional rules, see PLAN.md
     trewas_forward_only: bool = False  # the Matus/Leoncito variation
+    trewas_no_backward: bool = False  # a variation the user knows: forward or sideways, never back; forward-only takes precedence
 
 
 DEFAULT_RULES = Rules()
+RULE_VARIANTS = {
+    "standard": DEFAULT_RULES,
+    "no-backward": Rules(trewas_no_backward=True),
+    "forward-only": Rules(trewas_forward_only=True),
+}
 
 
 class GameState(NamedTuple):
@@ -54,6 +60,10 @@ _FORWARD_STEPS: tuple[tuple[tuple[int, int], ...], ...] = tuple(
     tuple((1 << n, _ACTION_ID[Action(p, n, None)]) for n in NEIGHBORS[p] if COORDS[n][1] < COORDS[p][1])
     for p in range(NUM_POINTS)
 )
+_NO_BACKWARD_STEPS: tuple[tuple[tuple[int, int], ...], ...] = tuple(
+    tuple((1 << n, _ACTION_ID[Action(p, n, None)]) for n in NEIGHBORS[p] if COORDS[n][1] <= COORDS[p][1])
+    for p in range(NUM_POINTS)
+)
 _JUMPS_FROM: tuple[tuple[tuple[int, int, int], ...], ...] = tuple(
     tuple((1 << b, 1 << c, _ACTION_ID[Action(a, c, b)]) for x, b, c in JUMPS if x == a)
     for a in range(NUM_POINTS)
@@ -76,6 +86,22 @@ def points_of(mask: int) -> list[int]:
     return out
 
 
+def mirror_action(action: int) -> int:
+    """The same move reflected left to right."""
+    src, dst, over = ACTIONS[action]
+    if src is None:
+        return action
+    return _ACTION_ID[Action(MIRROR_POINT[src], MIRROR_POINT[dst], None if over is None else MIRROR_POINT[over])]
+
+
+def mirror_state(state: GameState) -> GameState:
+    """The same position reflected left to right."""
+    return state._replace(
+        komikelu=MIRROR_POINT[state.komikelu],
+        trewas=bitmask(MIRROR_POINT[p] for p in points_of(state.trewas)),
+    )
+
+
 def initial_state() -> GameState:
     return GameState(KOMIKELU_START, bitmask(TREWAS_START), KOMIKELU, False, 0, 0)
 
@@ -84,7 +110,7 @@ def legal_actions(state: GameState, rules: Rules = DEFAULT_RULES) -> list[int]:
     if state.to_move == KOMIKELU:
         return _komikelu_actions(state)
     occupied = state.trewas | (1 << state.komikelu)
-    table = _FORWARD_STEPS if rules.trewas_forward_only else _STEPS
+    table = _FORWARD_STEPS if rules.trewas_forward_only else _NO_BACKWARD_STEPS if rules.trewas_no_backward else _STEPS
     return [a for p in points_of(state.trewas) for bit, a in table[p] if not occupied & bit]
 
 

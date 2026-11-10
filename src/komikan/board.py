@@ -95,6 +95,9 @@ JUMPS: tuple[tuple[int, int, int], ...] = tuple(
     if c != a and _is_straight(a, b, c)
 )
 
+# The board is left-right symmetric: the point each point maps to under a mirror.
+MIRROR_POINT: tuple[int, ...] = tuple(_INDEX[(-x, y)] for x, y in COORDS)
+
 APEX = sq(2, 0)
 KOMIKELU_START = tri(2, 0)
 TREWAS_START: tuple[int, ...] = (

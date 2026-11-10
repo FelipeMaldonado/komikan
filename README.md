@@ -88,14 +88,89 @@ uv run komikan-export-web
 python3 -m http.server 8321 --directory web
 ```
 
-Then open http://localhost:8321. The live site is served from the `gh-pages` branch, which holds only `web/`. To update it after
-committing to `main`:
+Then open http://localhost:8321. When you play the komikelu, the computer's trewas are best-play search with the squeeze score at
+depth 5 (`minimax:5:squeeze`, see "Search without a network"), not the trained agent, which is much weaker. When you play the trewas,
+the computer's komikelu is the trained agent. Options in the address, for testing: `?squeeze=4` for another depth, `?search=1600`
+for Monte Carlo search, `?trewas=agent` for the trained trewas, and `?record` to record games outside `localhost`.
+
+The live site is served from the `gh-pages` branch, which holds only `web/`. To update it after committing to `main`:
 
 ```bash
 git push origin "$(git subtree split --prefix web main):refs/heads/gh-pages"
 ```
 
+## Recording games for training
+
+The site keeps every finished game in the browser that played it, and nothing is sent anywhere. Abandoned games aren't kept.
+Storage is per site, so games played at `localhost` and on the live site are separate.
+
+1. Choose "Trained agent", play as Trewas, and finish the game.
+2. When you have some games, choose Download. The file holds all recorded games, so overlapping downloads are fine.
+3. Save it in `recordings/`, which git ignores, then check it:
+
+```bash
+uv run komikan-recordings recordings/*.json
+```
+
+This replays every game through the engine and rejects any that are illegal or don't match the current rules.
+`load_all` and `RecordedGame.human_moves()` in `recordings.py` give the (state, action) examples for training.
+
+## Learning from recorded games
+
+`komikan-pretrain` clones recorded moves (each also mirrored left to right), trains the value network with the policy frozen,
+then continues with PPO. `--no-clone` and `--placebo` (random legal moves on the same positions) are controls.
+
+```bash
+uv run komikan-pretrain --recordings recordings/*.json --init models/trewas.zip --clone-epochs 10 --clone-learning-rate 1e-4 --out runs/my-run
+```
+
+**So far this hasn't produced a stronger agent.** With 5 recorded games, all wins by the human against the komikelu agent:
+
+- A clone predicts the human's move in unseen games about 35% of the time (random guessing: 5%), but on its own it loses most
+  games, because the human almost never hung a piece and so the games barely show recovery from bad positions.
+- Cloned from scratch and continued with PPO, it won no games against any benchmark in the first experiment and lost more than
+  its control. Fine-tuning the existing agent gently enough to keep its safe play matched the human only 6% of the time.
+- Fine-tuned with the human's games, with random moves (placebo) or not at all, the agents were level: about 15% wins against a
+  random komikelu, 0% against minimax 2 and 3, and 0% against the first run's best komikelu, with large gaps between seeds
+  (3 seeds per group). The agents in `models/` are unchanged.
+
+`--no-clone --start-from human` skips cloning and instead starts half of the episodes from positions in the human's wins.
+This improved finishing against known training partners, but not against unseen agents or in full games.
+
+## Search without a network
+
+`mcts:<simulations>[:<draw>[:<playout>]]` is a bot spec that plays by tree search alone. `<draw>` is the value of a draw to the
+komikelu, so use 0.5 when it plays the trewas. As trewas, it beats agents that the trained agent can't, though it mostly draws.
+
+```bash
+uv run komikan-eval --komikelu policy:models/komikelu.npz --trewas mcts:1600:0.5:2 --games 10
+```
+
+The strongest trewas so far is `minimax:<depth>:squeeze`: alpha-beta search with a score that rewards shrinking the komikelu's room. At
+depth 5 it wins about 96% of games against the trained komikelu agents, and loses none. `mcts:<...>:squeeze` uses the same score in tree
+search, which helps much less.
+
+```bash
+uv run komikan-eval --komikelu policy:runs/first/komikelu.npz --trewas minimax:5:squeeze --games 10
+```
+
+The site has both searches in `web/search.js`, not linked from the page: open it with `?squeeze=5`, or `?search=1600` for tree search.
+
+`puct:<simulations>:<mode>[:<exploration>]` is search guided by the trained networks, with mode `none`, `prior`, `value`, `rawvalue` or
+`both`. Modes that use a value network need the export described in `experiments/guided_experiment.sh`. As trewas it does worse than
+plain search against agents the networks never trained with. As komikelu it does better, though it mostly draws.
+
+## Self-play training
+
+`python -m komikan.selfplay` trains a policy and a value network per role from scratch, AlphaZero-style, using search and game results
+only. `az:<simulations>:<directory>` is the bot spec for playing with the result. In a small test the trewas learned not to lose, but
+almost never won, so plain search is still stronger against unseen agents.
+
+```bash
+uv run python -m komikan.selfplay --out runs/selfplay/try --generations 2 --games 8 --simulations 25
+```
+
 ## Sources
 
-Rules, setup and board: "El juego del Komikan" by Chile para Niños (CC BY-SA), based on Matus (1920), Molina and Manquilef.
+Rules, setup and board: ["El juego del Komikan"](https://www.chileparaninos.gob.cl/639/w3-article-639005.html) by Chile para Niños (CC BY-SA), based on Matus (1920), Molina and Manquilef.
 The PDF's illustrations aren't used here. See also [Komikan on Wikipedia](https://es.wikipedia.org/wiki/Komikan).

@@ -129,6 +129,13 @@ dl { display: flex; gap: 28px; margin: 0; }
 dt { font-size: 13px; color: var(--muted); }
 dd { margin: 0; font-size: 20px; font-variant-numeric: tabular-nums; }
 
+button:disabled { opacity: .45; cursor: default; }
+
+.recordings { display: flex; flex-direction: column; gap: 6px; }
+.recorded-count { margin: 0; font-weight: 600; }
+.recording-actions { display: flex; gap: 8px; margin-top: 6px; }
+.recording-actions button { flex: 1; }
+
 details { border-top: 1px solid var(--rule); padding-top: 12px; }
 summary { cursor: pointer; font-weight: 600; }
 details ul { margin: 10px 0 0; padding-left: 18px; font-size: 15px; }
@@ -146,8 +153,9 @@ a { color: inherit; }
   .board-area { order: 0; }
   .status { order: 1; }
   #setup { order: 2; }
-  details { order: 3; }
-  footer { order: 4; }
+  .recordings { order: 3; }
+  details { order: 4; }
+  footer { order: 5; }
   h1 { font-size: 30px; }
 }
 

@@ -8,7 +8,7 @@
 
 ## Rules as implemented
 
-Source: the "El juego del Komikan" PDF by Chile para Niños (not included in this repository), following Matus (1920) for the board.
+Source: the ["El juego del Komikan"](https://www.chileparaninos.gob.cl/639/w3-article-639005.html) PDF by Chile para Niños (not included in this repository), following Matus (1920) for the board.
 
 | Topic | Rule | Source |
 | --- | --- | --- |
@@ -48,6 +48,8 @@ src/komikan/
   train.py      self-play training loop
   evaluate.py   matches and tournament tables
   export_web.py writes board data and agent weights for the web app
+  recordings.py loads and validates games recorded on the site
+  pretrain.py   learning from recorded games: behavioural cloning, then PPO
 tests/          rules (including the PDF examples), env, policy export, JS engine agreement
 models/         final saved agents
 web/            static site for GitHub Pages
@@ -92,7 +94,9 @@ Target: GitHub Pages (https://felipemaldonado.github.io), so everything runs in 
 4. [x] Self-play training and evaluation
 5. [x] First trained agents saved
 6. [x] Web app: human vs human and human vs agent
-7. [ ] Stronger agents, the trewas above all: they draw most games (see README). Try a broader opponent pool, longer runs, or
-   AlphaZero-style MCTS
+7. [ ] Stronger agents, the trewas above all. They draw most games (see README), though a human won 5 of 5 as the trewas against
+   the komikelu agent. Cloning recorded games and then running PPO didn't beat its controls. Next, in order: start training
+   episodes from mid-game positions of recorded wins; keep an imitation loss during PPO; AlphaZero-style MCTS. The komikelu agent
+   needs work too.
 8. [x] Publish the site to GitHub Pages: https://felipemaldonado.github.io/komikan/ (the `gh-pages` branch holds `web/`)
 9. [ ] Optional: Spanish UI, Leoncito variant agents

@@ -116,3 +116,35 @@ def test_score_gives_draws_no_credit():
     assert MatchResult(draws=10).score(TREWAS) == 0
     assert MatchResult(trewas_wins=3, komikelu_wins=1, draws=6).score(TREWAS) == pytest.approx(0.2)
     assert MatchResult(trewas_wins=3, komikelu_wins=1, draws=6).score(KOMIKELU) == pytest.approx(-0.2)
+
+
+def test_relative_advance_pays_nothing_for_walking_past_the_komikelu():
+    from komikan.board import COORDS, NUM_POINTS, NEIGHBORS
+    from komikan.env import RewardConfig, trewas_potential
+    from komikan.game import GameState, KOMIKELU, bitmask
+
+    relative = RewardConfig(relative_advance=True, confine=0.0, corner=0.0)
+    absolute = RewardConfig(confine=0.0, corner=0.0)
+    komikelu = next(p for p in range(NUM_POINTS) if COORDS[p][1] == 6)
+    above = next(p for p in range(NUM_POINTS) if COORDS[p][1] == 12)
+    level = next(p for p in range(NUM_POINTS) if COORDS[p][1] == 6 and p != komikelu)
+    below = next(p for p in range(NUM_POINTS) if COORDS[p][1] == -6)
+
+    def state(trewa):
+        return GameState(komikelu, bitmask([trewa]), KOMIKELU, False, 0, 10)
+
+    # Moving down to the komikelu's level still pays, in both.
+    assert trewas_potential(state(level), cfg=relative) > trewas_potential(state(above), cfg=relative)
+    # Past it, only the absolute bonus keeps paying.
+    assert trewas_potential(state(below), cfg=relative) == trewas_potential(state(level), cfg=relative)
+    assert trewas_potential(state(below), cfg=absolute) > trewas_potential(state(level), cfg=absolute)
+
+
+def test_reward_config_can_be_replaced_on_a_running_env():
+    from komikan.env import KomikanEnv, RewardConfig
+    from komikan.game import initial_state
+
+    env = KomikanEnv(role="trewas")
+    plain = env._trewas_potential(initial_state())
+    env.reward_config = RewardConfig(advance=0.0, confine=2.0)
+    assert env._trewas_potential(initial_state()) != plain

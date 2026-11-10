@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 from pathlib import Path
 
@@ -49,7 +50,8 @@ def main() -> None:
             continue
         blob, shapes = policy_to_web(NumpyPolicy.load(source))
         (args.out / f"{name}.bin").write_bytes(blob)
-        agents[name] = {"file": f"{name}.bin", "shapes": shapes}
+        # The id ties recorded games to the exact agent they were played against.
+        agents[name] = {"file": f"{name}.bin", "shapes": shapes, "id": hashlib.sha256(blob).hexdigest()[:12]}
         print(f"{name}: {len(blob) / 1024:.0f} KB")
     (args.out / "agents.json").write_text(json.dumps(agents, indent=1))
 

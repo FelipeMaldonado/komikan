@@ -19,6 +19,8 @@ dev = [
 komikan-train = "komikan.train:main"
 komikan-eval = "komikan.evaluate:main"
 komikan-export-web = "komikan.export_web:main"
+komikan-recordings = "komikan.recordings:main"
+komikan-pretrain = "komikan.pretrain:main"
 
 [build-system]
 requires = ["hatchling"]
