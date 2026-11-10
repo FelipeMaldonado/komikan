@@ -30,6 +30,9 @@ These are assumptions, and each is a single setting or a small change in `game.p
 - **Captured trewas leave the board immediately.** The p.6 example needs a closed loop, and this is consistent with it.
 - **Straight lines run through the apex.** A jump such as square (2,1) over the apex into the triangle is legal, because the
   points are collinear on the drawn board.
+- **The site's default: the komikelu wins at 8 captures (house rule).** With 4 trewas left they can trap it only on the two
+  outer corners of the triangle, so with the 200-turn draw they could only run out the clock. The site offers 9, the PDF's rule,
+  too. Python's `Rules.captures_to_win` is still 9 by default, so all training and experiments used 9.
 - **Draw after 200 turns (added rule).** The rules have no draw, but both sides can shuffle forever, so RL episodes and web
   games need a limit. A multi-jump counts as one turn. See `Rules.max_plies`.
 - **Trewas with no legal move lose.** This is practically unreachable with the default rules.

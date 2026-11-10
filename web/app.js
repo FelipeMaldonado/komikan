@@ -45,17 +45,17 @@
 
   let engine, policies = {};
   const agentIds = {};
+  let board;
+  const trained = [];
   try {
-    const [board, agents] = await Promise.all([
+    const [boardData, agents] = await Promise.all([
       fetch("data/board.json").then(checked).then((r) => r.json()),
       fetch("data/agents.json").then(checked).then((r) => r.json()),
     ]);
-    engine = createEngine(board);
+    board = boardData;
     for (const [name, agent] of Object.entries(agents)) {
       const values = new Float32Array(await fetch(`data/${agent.file}`).then(checked).then((r) => r.arrayBuffer()));
-      const role = name === "komikelu" ? KOMIKELU : TREWAS;
-      policies[role] = createPolicy(engine, values, agent.shapes);
-      agentIds[role] = agent.id;
+      trained.push({ role: name === "komikelu" ? KOMIKELU : TREWAS, values, shapes: agent.shapes, id: agent.id });
     }
   } catch (error) {
     statusEl.textContent = t("loadError");
@@ -74,14 +74,37 @@
   const trainedTrewas = params.get("trewas") === "agent";
   const fixedDepth = Math.min(Number(params.get("squeeze")) || 0, 6);
   const useLevels = !trainedTrewas && searchSimulations === 0 && fixedDepth === 0;
-  const DIFFICULTY_KEY = "komikan-difficulty";
   el("difficulty").hidden = !useLevels;
-  try {
-    const saved = localStorage.getItem(DIFFICULTY_KEY);
-    const input = saved && setupEl.querySelector(`input[name="level"][value="${CSS.escape(saved)}"]`);
-    if (input) input.checked = true;
-  } catch {
-    // Storage may be unavailable; keep the default.
+
+  // Settings remembered in this browser: difficulty, and how many captures win for the komikelu.
+  const SETTING_KEYS = { level: "komikan-difficulty", captures: "komikan-captures" };
+  for (const [name, key] of Object.entries(SETTING_KEYS)) {
+    try {
+      const saved = localStorage.getItem(key);
+      const input = saved && setupEl.querySelector(`input[name="${name}"][value="${CSS.escape(saved)}"]`);
+      if (input) input.checked = true;
+    } catch {
+      // Storage may be unavailable; keep the default.
+    }
+  }
+
+  // The rules, the trained agents and the search all depend on how many captures win, so a game sets all of them up.
+  function setUpOpponents(capturesToWin) {
+    engine = createEngine({ ...board, rules: { ...board.rules, capturesToWin } });
+    policies = {};
+    for (const agent of trained) {
+      policies[agent.role] = createPolicy(engine, agent.values, agent.shapes);
+      agentIds[agent.role] = agent.id;
+    }
+    document.title = "Komikan";
+    if (fixedDepth > 0) {
+      useSqueeze(fixedDepth);
+    } else if (searchSimulations > 0) {
+      const search = Komikan.createSearch(engine, { simulations: searchSimulations, playout: 2, draw: 0.5 });
+      policies[TREWAS] = { selectAction: (s) => search.selectAction(s) };
+      agentIds[TREWAS] = `mcts:${searchSimulations}:0.5:2`;
+      document.title += ` (trewas: search ${searchSimulations})`;
+    }
   }
 
   function useSqueeze(depth) {
@@ -91,17 +114,12 @@
     document.title = `Komikan (trewas: squeeze ${depth})`;
   }
 
+  const chosenCaptures = () => Number(new FormData(setupEl).get("captures")) || board.rules.capturesToWin;
+  setUpOpponents(chosenCaptures());
+
   // Games are recorded locally, or on the live site only with ?record.
   const recording = params.has("record") || ["localhost", "127.0.0.1"].includes(location.hostname);
   el("recordings").hidden = !recording;
-  if (fixedDepth > 0) {
-    useSqueeze(fixedDepth);
-  } else if (searchSimulations > 0) {
-    const search = Komikan.createSearch(engine, { simulations: searchSimulations, playout: 2, draw: 0.5 });
-    policies[TREWAS] = { selectAction: (s) => search.selectAction(s) };
-    agentIds[TREWAS] = `mcts:${searchSimulations}:0.5:2`;
-    document.title += ` (trewas: search ${searchSimulations})`;
-  }
 
   const px = ([x, y]) => [(x + 6) * SCALE + MARGIN, (y + 6) * SCALE + MARGIN];
   const width = 12 * SCALE + 2 * MARGIN, height = 18 * SCALE + 2 * MARGIN;
@@ -221,7 +239,9 @@
     const form = new FormData(setupEl);
     const vsAgent = form.get("mode") === "agent";
     const humanRole = Number(form.get("role"));
+    setUpOpponents(chosenCaptures());
     if (useLevels) useSqueeze(Number(form.get("level")));
+    el("rule-captures").textContent = t("ruleCaptures", engine.rules.capturesToWin);
     humans = vsAgent && policies[1 - humanRole] ? [humanRole] : [KOMIKELU, TREWAS];
     state = engine.initialState();
     selected = null;
@@ -360,9 +380,9 @@
 
   setupEl.addEventListener("submit", (e) => { e.preventDefault(); newGame(); });
   setupEl.addEventListener("change", (e) => {
-    if (e.target.name === "level") {
+    if (e.target.name in SETTING_KEYS) {
       try {
-        localStorage.setItem(DIFFICULTY_KEY, e.target.value);
+        localStorage.setItem(SETTING_KEYS[e.target.name], e.target.value);
       } catch {
         // The choice then lasts only for this visit.
       }
@@ -381,6 +401,7 @@
       // The choice then lasts only for this visit.
     }
     translatePage();
+    el("rule-captures").textContent = t("ruleCaptures", engine.rules.capturesToWin);
     refreshRecordings();
     syncSetup();
     clearTimeout(agentTimer);  // refresh() schedules the computer's move again, so it isn't played twice

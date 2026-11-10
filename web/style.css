@@ -144,6 +144,7 @@ summary { cursor: pointer; font-weight: 600; }
 details ul { margin: 10px 0 0; padding-left: 18px; font-size: 15px; }
 details li { margin-bottom: 6px; }
 
+.house-rule { margin: 0; font-size: 13px; color: var(--muted); }
 footer { font-size: 13px; color: var(--muted); }
 a { color: inherit; }
 
@@ -158,7 +159,8 @@ a { color: inherit; }
   #setup { order: 2; }
   .recordings { order: 3; }
   details { order: 4; }
-  footer { order: 5; }
+  .house-rule { order: 5; }
+  footer { order: 6; }
   h1 { font-size: 30px; }
 }
 
